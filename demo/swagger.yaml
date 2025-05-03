@@ -1,0 +1,823 @@
+openapi: 3.0.0
+info:
+  title: 老年人健康监测系统 API V1
+  version: 1.0.0
+  description: 包含 AI 分析和健康档案管理的老年人健康监测系统 API
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: 开发环境服务器
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 用户ID
+        phone:
+          type: string
+          description: 手机号码
+        role:
+          type: string
+          enum: [elderly, family, doctor]
+          description: 用户角色（老人/家属/医生）
+
+    HealthData:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 健康数据ID
+        userId:
+          type: integer
+          description: 用户ID
+        heartRate:
+          type: number
+          description: 心率
+        bloodPressure:
+          type: object
+          properties:
+            systolic:
+              type: number
+              description: 收缩压
+            diastolic:
+              type: number
+              description: 舒张压
+        bloodOxygen:
+          type: number
+          description: 血氧饱和度
+        timestamp:
+          type: string
+          format: date-time
+          description: 数据采集时间
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 设备ID
+        userId:
+          type: integer
+          description: 用户ID
+        deviceId:
+          type: string
+          description: 设备序列号
+        type:
+          type: string
+          enum: [watch, radar, sensor]
+          description: 设备类型（手环/雷达/传感器）
+        status:
+          type: string
+          enum: [active, inactive]
+          description: 设备状态（激活/未激活）
+        battery:
+          type: number
+          description: 电池电量
+        online:
+          type: boolean
+          description: 在线状态
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 报警ID
+        userId:
+          type: integer
+          description: 用户ID
+        type:
+          type: string
+          enum: [fall, heartRate, bloodPressure]
+          description: 报警类型（跌倒/心率/血压）
+        location:
+          type: string
+          description: 报警位置
+        status:
+          type: string
+          enum: [pending, resolved]
+          description: 报警状态（待处理/已解决）
+        timestamp:
+          type: string
+          format: date-time
+          description: 报警时间
+        notes:
+          type: string
+          description: 备注信息
+
+    MedicationRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 用药记录ID
+        userId:
+          type: integer
+          description: 用户ID
+        drugName:
+          type: string
+          description: 药品名称
+        dosage:
+          type: string
+          description: 用药剂量
+        frequency:
+          type: string
+          description: 用药频率
+        timestamp:
+          type: string
+          format: date-time
+          description: 记录时间
+
+    HealthReport:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 报告ID
+        userId:
+          type: integer
+          description: 用户ID
+        period:
+          type: string
+          enum: [weekly, monthly]
+          description: 报告周期（周报/月报）
+        pdfUrl:
+          type: string
+          description: PDF报告下载地址
+        timestamp:
+          type: string
+          format: date-time
+          description: 报告生成时间
+
+paths:
+  /auth/register:
+    post:
+      summary: 用户注册
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  description: 手机号码
+                password:
+                  type: string
+                  description: 密码
+                role:
+                  type: string
+                  enum: [elderly, family, doctor]
+                  description: 用户角色
+      responses:
+        '201':
+          description: 用户注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                        description: 用户ID
+
+  /auth/login:
+    post:
+      summary: 用户登录
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  description: 手机号码
+                password:
+                  type: string
+                  description: 密码
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: JWT令牌
+                      role:
+                        type: string
+                        description: 用户角色
+
+  /auth/refresh:
+    post:
+      summary: 刷新访问令牌
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+                  description: 刷新令牌
+      responses:
+        '200':
+          description: 令牌刷新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: 新的访问令牌
+
+  /devices/bind:
+    post:
+      summary: 绑定设备
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                deviceId:
+                  type: string
+                  description: 设备序列号
+                type:
+                  type: string
+                  enum: [watch, radar, sensor]
+                  description: 设备类型
+      responses:
+        '201':
+          description: 设备绑定成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      deviceSN:
+                        type: integer
+                        description: 设备编号
+
+  /devices/data:
+    post:
+      summary: 上传实时设备数据
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceSN:
+                  type: integer
+                  description: 设备编号
+                heartRate:
+                  type: number
+                  description: 心率
+                bloodPressure:
+                  type: object
+                  properties:
+                    systolic:
+                      type: number
+                      description: 收缩压
+                    diastolic:
+                      type: number
+                      description: 舒张压
+                timestamp:
+                  type: string
+                  format: date-time
+                  description: 数据采集时间
+      responses:
+        '200':
+          description: 数据上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+
+  /devices/{deviceSN}/status:
+    get:
+      summary: 获取设备状态
+      tags: [Devices]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: deviceSN
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 设备编号
+      responses:
+        '200':
+          description: 设备状态获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      battery:
+                        type: number
+                        description: 电池电量
+                      online:
+                        type: boolean
+                        description: 在线状态
+
+  /health/real-time:
+    get:
+      summary: 获取实时健康数据
+      tags: [Health]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+      responses:
+        '200':
+          description: 健康数据获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthData'
+
+  /health/history:
+    get:
+      summary: 获取历史健康数据
+      tags: [Health]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+        - name: startTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: 开始时间
+        - name: endTime
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: 结束时间
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [heartRate, bloodPressure, bloodOxygen]
+          description: 数据类型
+      responses:
+        '200':
+          description: 历史数据获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HealthData'
+
+  /health/statistics:
+    get:
+      summary: 获取健康统计数据
+      tags: [Health]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [daily, weekly]
+          description: 统计周期
+      responses:
+        '200':
+          description: 统计数据获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      avgHeartRate:
+                        type: number
+                        description: 平均心率
+                      maxBloodPressure:
+                        type: object
+                        properties:
+                          systolic:
+                            type: number
+                            description: 最高收缩压
+                          diastolic:
+                            type: number
+                            description: 最高舒张压
+                      minBloodOxygen:
+                        type: number
+                        description: 最低血氧
+
+  /alerts/trigger:
+    post:
+      summary: 触发报警
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                type:
+                  type: string
+                  enum: [fall, heartRate, bloodPressure]
+                  description: 报警类型
+                location:
+                  type: string
+                  description: 报警位置
+      responses:
+        '201':
+          description: 报警触发成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      alertId:
+                        type: integer
+                        description: 报警ID
+
+  /alerts:
+    get:
+      summary: 获取报警记录
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, resolved]
+          description: 报警状态
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: 页码
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+          description: 每页数量
+      responses:
+        '200':
+          description: 报警记录获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+
+  /alerts/{alertId}:
+    put:
+      summary: 更新报警状态
+      tags: [Alerts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 报警ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [resolved]
+                  description: 报警状态
+                notes:
+                  type: string
+                  description: 备注信息
+      responses:
+        '200':
+          description: 报警状态更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+
+  /ai/report:
+    post:
+      summary: 生成健康报告
+      tags: [AI Analysis]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                period:
+                  type: string
+                  enum: [weekly, monthly]
+                  description: 报告周期
+      responses:
+        '202':
+          description: 报告生成任务已启动
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      reportId:
+                        type: integer
+                        description: 报告ID
+                      pdfUrl:
+                        type: string
+                        description: PDF报告下载地址
+
+  /ai/suggestions:
+    get:
+      summary: 获取健康建议
+      tags: [AI Analysis]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 用户ID
+      responses:
+        '200':
+          description: 健康建议获取成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      suggestions:
+                        type: array
+                        items:
+                          type: string
+                        description: 健康建议列表
+
+  /records/medication:
+    post:
+      summary: 添加用药记录
+      tags: [Health Records]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                drugName:
+                  type: string
+                  description: 药品名称
+                dosage:
+                  type: string
+                  description: 用药剂量
+                frequency:
+                  type: string
+                  description: 用药频率
+      responses:
+        '201':
+          description: 用药记录添加成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      recordId:
+                        type: integer
+                        description: 记录ID
+
+  /records/medical-history:
+    post:
+      summary: 上传病历
+      tags: [Health Records]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                file:
+                  type: string
+                  format: binary
+                  description: 病历文件
+      responses:
+        '201':
+          description: 病历上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码
+                  data:
+                    type: object
+                    properties:
+                      fileUrl:
+                        type: string
+                        description: 文件下载地址
+
+  /records/prescription:
+    post:
+      summary: 开具处方
+      tags: [Health Records]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  description: 用户ID
+                doctorId:
+                  type: integer
+                  description: 医生ID
+                content:
+                  type: string
+                  description: 处方内容
+      responses:
+        '201':
+          description: 处方开具成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    description: 状态码 

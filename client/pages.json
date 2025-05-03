@@ -1,0 +1,66 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录"
+      }
+    },
+    {
+      "path": "pages/register/index",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "实时健康信息"
+      }
+    },
+    {
+      "path": "pages/device/index",
+      "style": {
+        "navigationBarTitleText": "健康设备管理"
+      }
+    },
+    {
+      "path": "pages/user/index",
+      "style": {
+        "navigationBarTitleText": "用户信息"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "老年人健康监测系统",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#3cc51f",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/images/health.png",
+        "selectedIconPath": "static/images/health-active.png",
+        "text": "健康信息"
+      },
+      {
+        "pagePath": "pages/device/index",
+        "iconPath": "static/images/device.png",
+        "selectedIconPath": "static/images/device-active.png",
+        "text": "设备管理"
+      },
+      {
+        "pagePath": "pages/user/index",
+        "iconPath": "static/images/user.png",
+        "selectedIconPath": "static/images/user-active.png",
+        "text": "我的"
+      }
+    ]
+  }
+} 

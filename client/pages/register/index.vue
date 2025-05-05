@@ -2,110 +2,99 @@
   <view class="container">
     <view class="register-box">
       <view class="title">注册账号</view>
-      <view class="subtitle">请填写以下信息完成注册</view>
+      <view class="subtitle">加入我们，开启智能健康监护</view>
 
       <view class="form">
         <view class="input-group">
           <text class="label">手机号</text>
-          <input class="input" type="number" v-model="phone" placeholder="请输入手机号" maxlength="11" />
+          <input class="input" type="number" v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
         </view>
         <view class="input-group">
           <text class="label">密码</text>
-          <input class="input" type="password" v-model="password" placeholder="请输入密码" />
+          <input class="input" type="password" v-model="form.password" placeholder="请输入密码" />
         </view>
         <view class="input-group">
           <text class="label">确认密码</text>
-          <input class="input" type="password" v-model="confirmPassword" placeholder="请再次输入密码" />
+          <input class="input" type="password" v-model="form.confirmPassword" placeholder="请再次输入密码" />
         </view>
         <view class="input-group">
-          <text class="label">用户角色</text>
-          <picker @change="bindPickerChange" :value="roleIndex" :range="roles">
-            <view class="picker">
-              {{roles[roleIndex]}}
-            </view>
+          <text class="label">角色</text>
+          <picker class="picker" @change="handleRoleChange" :value="roleIndex" :range="roles">
+            <view class="picker-text">{{ roles[roleIndex] }}</view>
           </picker>
         </view>
 
         <view class="button-group">
-          <button class="register-button" @click="register">注册</button>
-          <button class="login-button" @click="navigateTo('/pages/login/index')">已有账号？去登录</button>
+          <button class="register-button" @click="handleRegister">注册</button>
+          <button class="back-button" @click="goToLogin">返回登录</button>
         </view>
       </view>
     </view>
   </view>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      phone: '',
-      password: '',
-      confirmPassword: '',
-      roleIndex: 0,
-      roles: ['老人', '家属', '医生']
-    }
-  },
-  methods: {
-    bindPickerChange(e) {
-      this.roleIndex = e.detail.value
-    },
-    async register() {
-      if (!this.phone || !this.password || !this.confirmPassword) {
-        uni.showToast({
-          title: '请填写完整信息',
-          icon: 'none'
-        })
-        return
-      }
+<script setup>
+import { reactive, ref } from 'vue'
+import { register } from '@/api/user'
 
-      if (this.password !== this.confirmPassword) {
-        uni.showToast({
-          title: '两次输入的密码不一致',
-          icon: 'none'
-        })
-        return
-      }
+const form = reactive({
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  role: 'elder' // 默认角色为老人
+})
 
-      try {
-        const response = await uni.request({
-          url: 'http://localhost:3000/api/v1/auth/register',
-          method: 'POST',
-          data: {
-            phone: this.phone,
-            password: this.password,
-            role: this.roles[this.roleIndex]
-          }
-        })
+const roles = ['老人', '家属', '医生']
+const roleIndex = ref(0)
 
-        if (response.statusCode === 200) {
-          uni.showToast({
-            title: '注册成功',
-            icon: 'success'
-          })
-          setTimeout(() => {
-            uni.navigateBack()
-          }, 1500)
-        } else {
-          uni.showToast({
-            title: response.data.message || '注册失败',
-            icon: 'none'
-          })
-        }
-      } catch (error) {
-        console.error('注册失败:', error)
-        uni.showToast({
-          title: '注册失败，请稍后重试',
-          icon: 'none'
-        })
-      }
-    },
-    navigateTo(url) {
-      uni.navigateTo({
-        url
-      })
-    }
+const handleRoleChange = (e) => {
+  roleIndex.value = e.detail.value
+  form.role = ['elder', 'family', 'doctor'][e.detail.value]
+}
+
+const handleRegister = async () => {
+  if (!form.phone || !form.password || !form.confirmPassword) {
+    uni.showToast({
+      title: '请填写完整信息',
+      icon: 'none'
+    })
+    return
   }
+
+  if (form.password !== form.confirmPassword) {
+    uni.showToast({
+      title: '两次输入的密码不一致',
+      icon: 'none'
+    })
+    return
+  }
+
+  try {
+    await register({
+      phone: form.phone,
+      password: form.password,
+      role: form.role
+    })
+    
+    uni.showToast({
+      title: '注册成功',
+      icon: 'success'
+    })
+    
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } catch (error) {
+    console.error('注册失败:', error)
+    uni.showToast({
+      title: error.message || '注册失败，请稍后重试',
+      icon: 'none'
+    })
+  }
+}
+
+const goToLogin = () => {
+  uni.navigateBack()
 }
 </script>
 
@@ -168,8 +157,11 @@ export default {
   border: 1rpx solid #eee;
   border-radius: 10rpx;
   padding: 20rpx;
-  font-size: 28rpx;
   background: #f8f8f8;
+}
+
+.picker-text {
+  font-size: 28rpx;
   color: #333;
 }
 
@@ -177,7 +169,7 @@ export default {
   margin-top: 60rpx;
 }
 
-.register-button, .login-button {
+.register-button, .back-button {
   width: 100%;
   padding: 20rpx 0;
   border-radius: 10rpx;
@@ -190,7 +182,7 @@ export default {
   color: #fff;
 }
 
-.login-button {
+.back-button {
   background: #f8f8f8;
   color: #666;
 }

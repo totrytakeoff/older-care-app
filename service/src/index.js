@@ -1,12 +1,16 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-
+import swaggerUi from 'swagger-ui-express';
+// import swaggerDocument from '../swagger.yaml' with {type : 'yaml'};
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
+import { fileURLToPath } from 'url';
 
 import routes from './routes/index.js';
 
 
-import 'reflect-metadata'; // 确保引入 reflect-metadata
 import sequelize from './config/db.js'; // 确保路径正确
 import UserService from './services/user.js';
 
@@ -57,10 +61,26 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.use(`/api`, routes);
+
+// 👇 加载 swagger.yaml
+
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const swaggerFilePath = path.resolve(__dirname, '../swagger.yaml');
+
+const file = fs.readFileSync(swaggerFilePath, 'utf8');
+const swaggerDocument = yaml.load(file);
+
+app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(`/api/v1`, routes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on localhost:${PORT}`);
+  console.log(`API docs: http://localhost:${PORT}/api/v1/docs`);
+  
 });
 
 export default app;

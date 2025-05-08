@@ -1,0 +1,175 @@
+openapi: 3.0.0
+info:
+  title: Device API
+  description: Device management API for older-care-app
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local server
+
+tags:
+  - name: Device
+    description: Device management operations
+
+paths:
+
+  /devices/{userid}:
+    get:
+      summary: Get device list by user ID
+      tags: [Device]
+      parameters:
+        - name: userid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '500':
+          description: Internal server error
+
+  /devices/{userid}/getDeviceList:
+    get:
+      summary: Get device list by user ID (Alternative endpoint)
+      tags: [Device]
+      parameters:
+        - name: userid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '500':
+          description: Internal server error
+
+  /devices/bind:
+    post:
+      summary: Bind a new device to a user
+      tags: [Device]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                deviceSN:
+                  type: string
+                type:
+                  type: string
+                  enum: ["wearable", "BPMonitor", "BGMeter", "spO2Monitor", "ECGMonitor", "BFPMonitor", "Thermometer", "other"]
+              required: ["userId", "deviceSN", "type"]
+      responses:
+        '200':
+          description: Device bound successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Invalid device type
+        '409':
+          description: Device already bound
+        '500':
+          description: Internal server error
+
+  /devices/unbind:
+    post:
+      summary: Unbind a device from a user
+      tags: [Device]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                deviceSN:
+                  type: string
+              required: ["userId", "deviceSN"]
+      responses:
+        '200':
+          description: Device unbound successfully
+        '403':
+          description: Device does not belong to the user
+        '404':
+          description: Device not found
+        '500':
+          description: Internal server error
+
+  /devices/{deviceSN}/status:
+    get:
+      summary: Get the status of a device
+      tags: [Device]
+      parameters:
+        - name: deviceSN
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: active
+                  lastSyncTime:
+                    type: string
+                    format: date-time
+                  metaData:
+                    type: object
+        '404':
+          description: Device not found
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        sn:
+          type: string
+        mac:
+          type: string
+        deviceType:
+          type: string
+          enum: ["wearable", "BPMonitor", "BGMeter", "spO2Monitor", "ECGMonitor", "BFPMonitor", "Thermometer", "other"]
+        status:
+          type: string
+          enum: ["active", "inactive"]
+        metaData:
+          type: object
+          nullable: true
+        lastSyncTime:
+          type: string
+          format: date-time
+        userId:
+          type: string

@@ -10,7 +10,7 @@ const mockDevInfo = (devType) => {
     return {
         sn: faker.string.alphanumeric({length:12,casing:'upper'}), // 如：AB12-CD34-EF56-GH78,
         mac: faker.internet.mac(),
-        deviceId: `${BaseDevID}${devID++}`,
+        // deviceId: `${BaseDevID}${devID++}`,
         deviceType: devType,
         status: "active",
 

@@ -1,4 +1,5 @@
 import { Model } from "sequelize";
+import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import User from "./user.js";
 
@@ -19,10 +20,10 @@ Device.init(
         type: DataTypes.STRING,
         unique: true,
     },
-    deviceId: {
-      type: DataTypes.STRING,
-      unique: true,
-    },
+    // deviceId: {
+    //   type: DataTypes.STRING,
+    //   unique: true,
+    // },
     deviceType: {
         // 设备类型 穿戴设备 血压计 血糖仪 血氧仪 心电图仪 体脂秤 体温计 其他
       type: DataTypes.ENUM("wearable", "BPMonitor","BGMeter","spO2Monitor",
@@ -30,6 +31,10 @@ Device.init(
     },
     status: {
       type: DataTypes.ENUM("active", "inactive"),
+    },
+    metaData: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
     lastSyncTime: {
       type: DataTypes.DATE,

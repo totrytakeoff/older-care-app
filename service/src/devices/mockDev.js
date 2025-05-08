@@ -18,7 +18,7 @@ const mockDevInfo = (devType) => {
 }
 
 
-const mockHealthData = (deviceType) => {
+const mockHealthData = async (deviceType) => {
   const baseData = {
     timestamp: new Date().toISOString(),
   };
@@ -56,7 +56,7 @@ const mockHealthData = (deviceType) => {
         bloodGlucose: faker.number.float({ min: 4, max: 10, multipleOf: 0.1 }), // 血糖 mmol/L
       };
     default:
-      return {};
+      return {info: 'Invalid device type'};
   }
 };
 

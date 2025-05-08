@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
-  title: Device API
-  description: Device management API for older-care-app
+  title:  API/v1
+  description: API for older-care-app
   version: 1.0.0
 
 servers:
@@ -11,6 +11,8 @@ servers:
 tags:
   - name: Device
     description: Device management operations
+  - name: Alert
+    description: Alert management operations
 
 paths:
 
@@ -19,7 +21,7 @@ paths:
       summary: Get device list by user ID
       tags: [Device]
       parameters:
-        - name: userid
+        - name: userId
           in: path
           required: true
           schema:
@@ -41,7 +43,7 @@ paths:
       summary: Get device list by user ID (Alternative endpoint)
       tags: [Device]
       parameters:
-        - name: userid
+        - name: userId
           in: path
           required: true
           schema:
@@ -75,8 +77,18 @@ paths:
                   type: string
                 type:
                   type: string
-                  enum: ["wearable", "BPMonitor", "BGMeter", "spO2Monitor", "ECGMonitor", "BFPMonitor", "Thermometer", "other"]
-              required: ["userId", "deviceSN", "type"]
+                  enum:
+                    [
+                      'wearable',
+                      'BPMonitor',
+                      'BGMeter',
+                      'spO2Monitor',
+                      'ECGMonitor',
+                      'BFPMonitor',
+                      'Thermometer',
+                      'other',
+                    ]
+              required: ['userId', 'deviceSN', 'type']
       responses:
         '200':
           description: Device bound successfully
@@ -106,7 +118,7 @@ paths:
                   type: string
                 deviceSN:
                   type: string
-              required: ["userId", "deviceSN"]
+              required: ['userId', 'deviceSN']
       responses:
         '200':
           description: Device unbound successfully
@@ -148,6 +160,162 @@ paths:
         '500':
           description: Internal server error
 
+  /devices/{userId}/getDeviceData:
+    get:
+      summary: 获取用户绑定的所有设备的模拟健康数据
+      description: 根据用户 ID 查询其所有绑定的设备，并为每个设备类型调用 mock 函数生成健康数据。
+      tags: [Device]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 用户的唯一标识
+      responses:
+        '200':
+          description: 成功返回用户所有设备的健康数据列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      example: "BPMonitor"
+                    data:
+                      type: object
+                      description: 模拟的健康数据
+                      properties:
+                        timestamp:
+                          type: string
+                          format: date-time
+                        value:
+                          type: number
+                      example:
+                        timestamp: "2025-04-05T12:00:00Z"
+                        value: 75
+        '500':
+          description: 内部服务器错误
+
+  /alerts/:userId:
+    get:
+      summary: 获取用户的警报列表
+      tags: [Alert]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功返回警报列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+        '500':
+          description: 内部服务器错误
+
+  /devices/{deviceSN}/getDeviceInfo:
+    get:
+      summary: 获取指定设备的详细信息
+      description: 根据设备序列号（SN）查询该设备的完整信息，包括设备类型、状态、绑定用户等。
+      tags: [Device]
+      parameters:
+        - name: deviceSN
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 设备的唯一序列号（SN）
+      responses:
+        '200':
+          description: 成功返回设备详细信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Device not found
+        '500':
+          description: Internal server error
+
+  /alerts/trigger:
+    post:
+      summary: 触发一个新的警报
+      tags: [Alert]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                type:
+                  type: string
+                  enum: ['fall', 'heart_rate_abnormal', 'location_out_of_range', 'other']
+                location:
+                  type: string
+                description:
+                  type: string
+              required: ['userId', 'type', 'location']
+      responses:
+        '200':
+          description: 警报成功触发
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  alertId:
+                    type: integer
+        '500':
+          description: 内部服务器错误
+
+  /alerts/update:
+    post:
+      summary: 更新某个警报的状态（如已解决）
+      tags: [Alert]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alertID:
+                  type: integer
+                status:
+                  type: boolean
+                  example: true
+              required: ['alertID', 'status']
+      responses:
+        '200':
+          description: 警报状态更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+        '404':
+          description: 警报未找到
+        '500':
+          description: 内部服务器 error
+
 components:
   schemas:
     Device:
@@ -161,10 +329,20 @@ components:
           type: string
         deviceType:
           type: string
-          enum: ["wearable", "BPMonitor", "BGMeter", "spO2Monitor", "ECGMonitor", "BFPMonitor", "Thermometer", "other"]
+          enum:
+            [
+              'wearable',
+              'BPMonitor',
+              'BGMeter',
+              'spO2Monitor',
+              'ECGMonitor',
+              'BFPMonitor',
+              'Thermometer',
+              'other',
+            ]
         status:
           type: string
-          enum: ["active", "inactive"]
+          enum: ['active', 'inactive']
         metaData:
           type: object
           nullable: true
@@ -173,3 +351,24 @@ components:
           format: date-time
         userId:
           type: string
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        type:
+          type: string
+          # enum: ['fall', 'heart_rate_abnormal', 'location_out_of_range', 'other']
+        triggerTime:
+          type: string
+          format: date-time
+        resolved:
+          type: boolean
+        location:
+          type: string
+        description:
+          type: string
+          nullable: true

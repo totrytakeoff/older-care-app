@@ -1,7 +1,6 @@
 import deviceController from '../controllers/device.js';
 import Device from '../models/device.js';
 import { mockDevInfo, mockHealthData } from '../devices/mockDev.js';
-import { de } from '@faker-js/faker';
 
 export const devlists = [
     'wearable',
@@ -39,15 +38,14 @@ const DeviceService = {
     },
     async bindDevice(userId, deviceSN, type) {
         try {
-            const device =await DeviceService.findBySN(deviceSN);
+            const device = await DeviceService.findBySN(deviceSN);
             if (device) {
                 throw new Error('Device already exists!');
             }
 
             const deviceInfo = await mockDevInfo(type);
-            
+
             if (!deviceInfo) {
-                
                 throw new Error('Device bind failed!');
             }
 
@@ -56,9 +54,7 @@ const DeviceService = {
 
             await Device.create(deviceInfo);
 
-            return {code: 200,
-                message: 'Device:'+deviceSN +' bind successfully!',
-            };
+            return { code: 200, message: 'Device:' + deviceSN + ' bind successfully!' };
         } catch (error) {
             throw error;
         }
@@ -77,9 +73,7 @@ const DeviceService = {
 
             await device.destroy();
 
-            return {code: 200,
-                message: 'Device:'+deviceSN +' unbind successfully!',
-            };
+            return { code: 200, message: 'Device:' + deviceSN + ' unbind successfully!' };
         } catch (error) {
             throw error;
         }
@@ -99,9 +93,29 @@ const DeviceService = {
             throw error;
         }
     },
+    async getDeviceData(userId) {
+        try {
+            const devices = await Device.findAll({
+                where: {
+                    userId: userId,
+                },
+            });
 
+            const healthDataList = await Promise.all(
+                devices.map(async (device) => {
+                    //注意mock中未定义的type会返回空
+                    const healthData = await mockHealthData(device.type);
+                    
+                    return {
+                        deviceSN: device.sn,
+                        data:healthData
+                    };
+                }),
+            );
 
-
+            return {code: 200, data: healthDataList};
+        } catch (error) {}
+    },
 
     async findBySN(deviceSN) {
         try {
@@ -111,7 +125,7 @@ const DeviceService = {
                 },
             });
             // console.log('findBySN:', device);
-            
+
             return device;
         } catch (error) {
             throw error;

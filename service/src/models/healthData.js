@@ -2,6 +2,7 @@
 import{Model} from 'sequelize';
 import sequelize from '../config/db.js';
 import User from './user.js';
+import { DataTypes } from 'sequelize';
 
 // 健康数据模型
 
@@ -47,7 +48,7 @@ class HealthData extends Model {}
                   });
 
 // 建立关系
-HealthData.belongsTo(User, {foreignKey : 'user_id', as : 'user'});
-User.hasMany(HealthData, {foreignKey : 'user_id', as : 'healthData'});
+HealthData.belongsTo(User, {foreignKey : 'userId', as : 'user'});
+User.hasMany(HealthData, {foreignKey : 'userId', as : 'healthData'});
 
 export default HealthData;

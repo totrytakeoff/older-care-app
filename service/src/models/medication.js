@@ -1,5 +1,5 @@
 // models/Medication.js
-import { Model } from 'sequelize';
+import { Model,DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 import User from './user.js';
 
@@ -36,7 +36,7 @@ Medication.init(
 );
 
 // 建立关系
-Medication.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-User.hasMany(Medication, { foreignKey: 'user_id', as: 'medications' });
+Medication.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+User.hasMany(Medication, { foreignKey: 'userId', as: 'medications' });
 
 export default Medication;
